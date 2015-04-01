@@ -20,7 +20,7 @@ app.use(express.static(__dirname + '/public'));
 
 oscListener = udp.createSocket("udp4", function(msg, rinfo) {
   // try {
-  	io.sockets.emit('osc', osc.fromBuffer(msg));
+    io.sockets.emit('osc', osc.fromBuffer(msg));
     console.log(colors.green("OSC > Browser: " + JSON.stringify(msg)));
   // } catch (e) {
   //   return console.log(colors.red("invalid OSC packet:" + e));
@@ -32,15 +32,20 @@ oscListener.bind(config.osc.port.in);
 oscEmmiter = udp.createSocket("udp4");
 
 io.on('connection', function (websocket) {
+    clientsConnected++;
 
-	clientsConnected++;
-
-	io.sockets.emit('users', clientsConnected);
+    io.sockets.emit('users', clientsConnected);
 
     websocket.on('osc', function (msg) {
-		var buf = osc.toBuffer(msg); // Must add a  real buffer. Check also JSON decoding.
-    	console.log(colors.blue("Browser > OSC: " + JSON.stringify(msg)));
-    	oscEmmiter.send(buf, 0, buf.length, config.osc.port.out, config.osc.address);
+        var buf = osc.toBuffer(msg); // Must add a  real buffer. Check also JSON decoding.
+        console.log(colors.blue("Browser > OSC: " + JSON.stringify(msg)));
+        oscEmmiter.send(buf, 0, buf.length, config.osc.port.out, config.osc.address);
+    });
+
+    websocket.on('chat message', function (msg) {
+        var buf = osc.toBuffer(msg); // Must add a  real buffer. Check also JSON decoding.
+        console.log(colors.green("Chat message received: " + JSON.stringify(msg)));
+        oscEmmiter.send(buf, 0, buf.length, config.osc.port.out, config.osc.address);
     });
 
     websocket.on('disconnect', function () {
@@ -56,8 +61,8 @@ http.listen(config.http.port.in, function () {
 });
 
 process.on('exit', function(code) {
-	oscListener.close();
-	oscEmmiter.close();
-	http.close();
+    oscListener.close();
+    oscEmmiter.close();
+    http.close();
     console.log(colors.rainbow("Quitting beloi OSC"));
 });
